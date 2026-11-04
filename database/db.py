@@ -112,3 +112,32 @@ def get_user_by_email(email):
         ).fetchone()
     finally:
         conn.close()
+
+
+def get_user_by_id(user_id):
+    """Return the user row matching id, or None if no such user exists."""
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def get_expenses_by_user(user_id):
+    """Return the user's expenses ordered by date desc, then id desc."""
+    conn = get_db()
+    try:
+        return conn.execute(
+            """
+            SELECT * FROM expenses
+            WHERE user_id = ?
+            ORDER BY date DESC, id DESC
+            """,
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+

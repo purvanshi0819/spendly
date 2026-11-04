@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Profile — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="profile-page">
+
+    <header class="profile-header">
+        <div>
+            <h1 class="profile-title">{{ user.name }}</h1>
+            <p class="profile-subtitle">{{ user.email }}</p>
+        </div>
+        <a href="{{ url_for('add_expense') }}" class="btn-primary profile-add-btn">
+            <i data-lucide="plus"></i> Add expense
+        </a>
+    </header>
+
+    <!-- User info card -->
+    <section class="profile-card">
+        <div class="profile-card-avatar" aria-hidden="true">
+            {{ user.name[:1]|upper if user.name else "?" }}
+        </div>
+        <div class="profile-card-info">
+            <h2 class="profile-card-name">{{ user.name }}</h2>
+            <p class="profile-card-email">{{ user.email }}</p>
+            <p class="profile-card-meta">Member since {{ user.created_at }}</p>
+        </div>
+        <a href="{{ url_for('logout') }}" class="profile-card-logout">Log out</a>
+    </section>
+
+    <!-- Summary stats -->
+    <section class="profile-stats">
+        <div class="profile-stat">
+            <span class="profile-stat-label">Total spent</span>
+            <span class="profile-stat-value">₹{{ total_spent }}</span>
+        </div>
+        <div class="profile-stat">
+            <span class="profile-stat-label">Transactions</span>
+            <span class="profile-stat-value">{{ expense_count }}</span>
+        </div>
+        <div class="profile-stat">
+            <span class="profile-stat-label">Top category</span>
+            <span class="profile-stat-value">{{ top_category if top_category else "—" }}</span>
+        </div>
+    </section>
+
+    <!-- Transaction history -->
+    <section class="profile-section">
+        <div class="profile-section-header">
+            <h2 class="profile-section-title">Transaction history</h2>
+        </div>
+
+        {% if expenses %}
+        <div class="profile-table-wrap">
+            <table class="profile-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th class="profile-th-amount">Amount</th>
+                        <th class="profile-th-actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for expense in expenses %}
+                    <tr>
+                        <td>{{ expense.date }}</td>
+                        <td class="profile-td-desc">
+                            {{ expense.description if expense.description is not none and expense.description != "" else "—" }}
+                        </td>
+                        <td>
+                            <span class="profile-badge profile-badge-{{ expense.category|lower|replace(' ', '-') }}">
+                                {{ expense.category }}
+                            </span>
+                        </td>
+                        <td class="profile-td-amount">₹{{ expense.amount }}</td>
+                        <td class="profile-td-actions">
+                            <a href="{{ url_for('edit_expense', id=expense.id) }}" class="profile-action-edit">Edit</a>
+                            <a href="{{ url_for('delete_expense', id=expense.id) }}" class="profile-action-delete">Delete</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="profile-empty">
+            <p class="profile-empty-text">No expenses yet.</p>
+            <a href="{{ url_for('add_expense') }}" class="btn-primary">Add your first expense</a>
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Category breakdown -->
+    <section class="profile-section">
+        <div class="profile-section-header">
+            <h2 class="profile-section-title">Category breakdown</h2>
+        </div>
+
+        {% if category_breakdown and total_spent %}
+        <ul class="profile-breakdown">
+            {% for item in category_breakdown %}
+            {% set pct = (item.total / total_spent * 100) if total_spent else 0 %}
+            <li class="profile-breakdown-row">
+                <div class="profile-breakdown-meta">
+                    <span class="profile-breakdown-name">{{ item.category }}</span>
+                    <span class="profile-breakdown-total">₹{{ item.total }}</span>
+                </div>
+                <div class="profile-breakdown-track">
+                    <div class="profile-breakdown-bar profile-breakdown-bar-{{ item.category|lower|replace(' ', '-') }}"
+                         style="width: {{ pct }}%;"></div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="profile-empty">
+            <p class="profile-empty-text">No categories to show yet.</p>
+        </div>
+        {% endif %}
+    </section>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    if (window.lucide) { lucide.createIcons(); }
+</script>
+{% endblock %}
