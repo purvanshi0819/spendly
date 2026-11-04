@@ -2,7 +2,7 @@ import sqlite3
 
 from flask import Flask, render_template, request, redirect, url_for, session
 
-from database.db import get_db, init_db, seed_db, create_user, get_user_by_email
+from database.db import get_db, init_db, seed_db, create_user, get_user_by_email, get_user_by_id, get_expenses_by_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -96,7 +96,38 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    user_id = session.get("user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(user_id)
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    expenses = get_expenses_by_user(user_id)
+
+    # Derived summary values (plain Python, no SQL).
+    total_spent = sum((e["amount"] or 0) for e in expenses)
+    expense_count = len(expenses)
+    category_totals = {}
+    for e in expenses:
+        category_totals[e["category"]] = category_totals.get(e["category"], 0) + (e["amount"] or 0)
+    top_category = max(category_totals, key=category_totals.get) if category_totals else None
+    category_breakdown = [
+        {"category": c, "total": t}
+        for c, t in sorted(category_totals.items(), key=lambda kv: kv[1], reverse=True)
+    ]
+
+    return render_template(
+        "profile.html",
+        user=user,
+        expenses=expenses,
+        total_spent=total_spent,
+        expense_count=expense_count,
+        top_category=top_category,
+        category_breakdown=category_breakdown,
+    )
 
 
 @app.route("/expenses/add")
