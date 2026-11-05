@@ -12,8 +12,8 @@
 
     <header class="profile-header">
         <div>
-            <h1 class="profile-title">{{ user.name }}</h1>
-            <p class="profile-subtitle">{{ user.email }}</p>
+            <h1 class="profile-title">Hi, {{ user.name }}</h1>
+            <!-- <p class="profile-subtitle">{{ user.email }}</p> -->
         </div>
         <a href="{{ url_for('add_expense') }}" class="btn-primary profile-add-btn">
             <i data-lucide="plus"></i> Add expense
@@ -47,6 +47,31 @@
             <span class="profile-stat-label">Top category</span>
             <span class="profile-stat-value">{{ top_category if top_category else "—" }}</span>
         </div>
+    </section>
+
+    <!-- Date filter -->
+    <section class="profile-section profile-filter-section">
+        <div class="profile-filter-chips">
+            <a href="{{ url_for('profile') }}"
+               class="profile-filter-chip {% if selected_range in ('', 'all_time') and not filter_active %}profile-filter-chip-active{% endif %}">All time</a>
+            <a href="{{ url_for('profile', range='this_month') }}"
+               class="profile-filter-chip {% if selected_range == 'this_month' %}profile-filter-chip-active{% endif %}">This month</a>
+            <a href="{{ url_for('profile', range='last_3_months') }}"
+               class="profile-filter-chip {% if selected_range == 'last_3_months' %}profile-filter-chip-active{% endif %}">Last 3 months</a>
+            <a href="{{ url_for('profile', range='last_6_months') }}"
+               class="profile-filter-chip {% if selected_range == 'last_6_months' %}profile-filter-chip-active{% endif %}">Last 6 months</a>
+        </div>
+
+        <form method="get" action="{{ url_for('profile') }}" class="profile-filter-form">
+            <label class="profile-filter-label" for="filter-start">From</label>
+            <input id="filter-start" type="date" name="start_date" value="{{ form_start }}" class="profile-filter-input">
+            <label class="profile-filter-label" for="filter-end">To</label>
+            <input id="filter-end" type="date" name="end_date" value="{{ form_end }}" class="profile-filter-input">
+            <button type="submit" class="btn-primary profile-filter-apply">Apply</button>
+            {% if filter_active %}
+            <a href="{{ url_for('profile') }}" class="profile-filter-clear">Clear filter</a>
+            {% endif %}
+        </form>
     </section>
 
     <!-- Transaction history -->
