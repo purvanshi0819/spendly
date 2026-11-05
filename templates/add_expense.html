@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Add expense — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add_expense.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<section class="add-expense-section">
+    <div class="add-expense-card">
+        <header class="add-expense-header">
+            <h1 class="add-expense-title">Add expense</h1>
+            <p class="add-expense-subtitle">Record a new transaction</p>
+        </header>
+
+        {% if error %}
+        <div class="auth-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('add_expense') }}" class="add-expense-form">
+            <div class="form-group">
+                <label for="amount">Amount (₹)</label>
+                <input type="number" step="0.01" min="0" id="amount" name="amount"
+                       class="form-input" placeholder="0.00"
+                       value="{{ form.amount if form is defined and form.amount is not none else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" class="form-input" required>
+                    <option value="">Select category</option>
+                    {% for c in categories %}
+                    <option value="{{ c }}"
+                        {% if form is defined and form.category == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" class="form-input"
+                       value="{{ form.date if form is defined and form.date is not none else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description (optional)</label>
+                <input type="text" id="description" name="description" class="form-input"
+                       placeholder="What was this for?"
+                       value="{{ form.description if form is defined and form.description is not none else '' }}">
+            </div>
+
+            <button type="submit" class="btn-submit">Save expense</button>
+        </form>
+
+        <a href="{{ url_for('profile') }}" class="add-expense-back">← Back to profile</a>
+    </div>
+</section>
+
+{% endblock %}

@@ -1,10 +1,15 @@
 import sqlite3
 
+import math
+import re
 from datetime import date, timedelta
+
+CATEGORIES = ["Food", "Transport", "Bills", "Health",
+              "Entertainment", "Shopping", "Other"]
 
 from flask import Flask, render_template, request, redirect, url_for, session
 
-from database.db import get_db, init_db, seed_db, create_user, get_user_by_email, get_user_by_id, get_expenses_by_user
+from database.db import get_db, init_db, seed_db, create_user, get_user_by_email, get_user_by_id, get_expenses_by_user, create_expense
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -192,9 +197,96 @@ def profile():
     )
 
 
-@app.route("/expenses/add")
+@app.route("/analytics")
+def analytics():
+    user_id = session.get("user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(user_id)
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template("analytics.html", user=user)
+
+
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    user_id = session.get("user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(user_id)
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    categories = CATEGORIES
+
+    if request.method == "GET":
+        return render_template(
+            "add_expense.html",
+            user=user,
+            categories=categories,
+            error=None,
+            form={"amount": "", "category": "", "date": date.today().isoformat(), "description": ""},
+        )
+
+    amount_raw = (request.form.get("amount") or "").strip()
+    category = (request.form.get("category") or "").strip()
+    date_raw = (request.form.get("date") or "").strip()
+    description_raw = (request.form.get("description") or "").strip()
+
+    error = None
+    amount = None
+    expense_date = None
+
+    if not amount_raw:
+        error = "Amount is required."
+    elif len(amount_raw) > 20:
+        error = "Amount is too long."
+    elif not re.fullmatch(r"^(\d+(\.\d*)?|\.\d+)$", amount_raw):
+        error = "Amount must be a non-negative number."
+    else:
+        amount = float(amount_raw)
+        if not math.isfinite(amount):
+            error = "Amount must be a finite number."
+        elif amount < 0:
+            error = "Amount cannot be negative."
+
+    if error is None and (not category or len(category) > 30 or category not in categories):
+        error = "Please choose a valid category."
+
+    if error is None and (not date_raw or len(date_raw) != 10 or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_raw)):
+        error = "Please enter a valid date."
+    if error is None:
+        try:
+            expense_date = date.fromisoformat(date_raw).isoformat()
+        except (ValueError, TypeError):
+            expense_date = None
+            error = "Please enter a valid date."
+
+    if error is None and len(description_raw) > 500:
+        error = "Description is too long."
+
+    if error:
+        return render_template(
+            "add_expense.html",
+            user=user,
+            categories=categories,
+            error=error,
+            form={
+                "amount": amount_raw,
+                "category": category,
+                "date": date_raw,
+                "description": description_raw,
+            },
+        )
+
+    description = description_raw or None
+    create_expense(user_id, amount, category, expense_date, description)
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/edit")
