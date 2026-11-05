@@ -281,6 +281,84 @@
 .profile-breakdown-bar-shopping { background: var(--accent); }
 .profile-breakdown-bar-other { background: var(--ink-muted); }
 
+/* Filter */
+.profile-filter-section {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75 rem;
+}
+
+.profile-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.profile-filter-chip {
+    display: inline-block;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--paper-card);
+    color: var(--ink-soft);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.profile-filter-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.profile-filter-chip-active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--paper);
+}
+
+.profile-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.profile-filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.profile-filter-input {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--paper-card);
+    color: var(--ink);
+    font-size: 0.85rem;
+}
+
+.profile-filter-apply {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+}
+
+.profile-filter-clear {
+    font-size: 0.85rem;
+    color: var(--ink-muted);
+    margin-left: 0.25rem;
+}
+
+.profile-filter-clear:hover {
+    color: var(--danger);
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .profile-stats { grid-template-columns: 1fr; }

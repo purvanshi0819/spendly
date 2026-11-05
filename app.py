@@ -1,5 +1,7 @@
 import sqlite3
 
+from datetime import date, timedelta
+
 from flask import Flask, render_template, request, redirect, url_for, session
 
 from database.db import get_db, init_db, seed_db, create_user, get_user_by_email, get_user_by_id, get_expenses_by_user
@@ -105,7 +107,63 @@ def profile():
         session.clear()
         return redirect(url_for("login"))
 
-    expenses = get_expenses_by_user(user_id)
+    # Parse optional date filters from query string (never trust raw input).
+    def _parse_iso(value):
+        value = (value or "").strip()
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value).isoformat()
+        except ValueError:
+            return None
+
+    allowed_ranges = {"this_month", "last_3_months", "last_6_months", "all_time"}
+    selected_range = (request.args.get("range") or "").strip()
+    if selected_range not in allowed_ranges:
+        selected_range = ""
+
+    start_raw = request.args.get("start_date")
+    end_raw = request.args.get("end_date")
+
+    today = date.today()
+
+    def _month_start(d, months_back):
+        total = d.month - 1 - months_back
+        year = d.year + total // 12
+        month = (total % 12) + 1
+        return date(year, month, 1)
+
+    def _month_end(d):
+        if d.month == 12:
+            return date(d.year + 1, 1, 1) - timedelta(days=1)
+        return date(d.year, d.month + 1, 1) - timedelta(days=1)
+
+    if selected_range:
+        if selected_range == "this_month":
+            filter_start = _month_start(today, 0)
+            filter_end = _month_end(today)
+        elif selected_range == "last_3_months":
+            filter_start = _month_start(today, 2)
+            filter_end = _month_end(today)
+        elif selected_range == "last_6_months":
+            filter_start = _month_start(today, 5)
+            filter_end = _month_end(today)
+        else:  # all_time
+            filter_start = None
+            filter_end = None
+        start_param = filter_start.isoformat() if filter_start else None
+        end_param = filter_end.isoformat() if filter_end else None
+        form_start = start_param or ""
+        form_end = end_param or ""
+    else:
+        start_param = _parse_iso(start_raw)
+        end_param = _parse_iso(end_raw)
+        form_start = start_param or ""
+        form_end = end_param or ""
+
+    expenses = get_expenses_by_user(user_id, start_date=start_param, end_date=end_param)
+
+    filter_active = bool(start_param or end_param)
 
     # Derived summary values (plain Python, no SQL).
     total_spent = sum((e["amount"] or 0) for e in expenses)
@@ -127,6 +185,10 @@ def profile():
         expense_count=expense_count,
         top_category=top_category,
         category_breakdown=category_breakdown,
+        selected_range=selected_range,
+        form_start=form_start,
+        form_end=form_end,
+        filter_active=filter_active,
     )
 
 

@@ -126,18 +126,20 @@ def get_user_by_id(user_id):
         conn.close()
 
 
-def get_expenses_by_user(user_id):
-    """Return the user's expenses ordered by date desc, then id desc."""
+def get_expenses_by_user(user_id, start_date=None, end_date=None):
+    """Return the user's expenses, optionally bounded by inclusive date range."""
     conn = get_db()
     try:
-        return conn.execute(
-            """
-            SELECT * FROM expenses
-            WHERE user_id = ?
-            ORDER BY date DESC, id DESC
-            """,
-            (user_id,),
-        ).fetchall()
+        query = "SELECT * FROM expenses WHERE user_id = ?"
+        params = [user_id]
+        if start_date:
+            query += " AND date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date <= ?"
+            params.append(end_date)
+        query += " ORDER BY date DESC, id DESC"
+        return conn.execute(query, params).fetchall()
     finally:
         conn.close()
 
