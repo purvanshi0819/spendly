@@ -126,6 +126,23 @@ def get_user_by_id(user_id):
         conn.close()
 
 
+def create_expense(user_id, amount, category, date_str, description=None):
+    """Insert a new expense for the given user and return the new row id."""
+    conn = get_db()
+    try:
+        cursor = conn.execute(
+            """
+            INSERT INTO expenses (user_id, amount, category, date, description)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, amount, category, date_str, description),
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
 def get_expenses_by_user(user_id, start_date=None, end_date=None):
     """Return the user's expenses, optionally bounded by inclusive date range."""
     conn = get_db()
