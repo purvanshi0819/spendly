@@ -192,6 +192,20 @@ def profile():
     )
 
 
+@app.route("/analytics")
+def analytics():
+    user_id = session.get("user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(user_id)
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template("analytics.html", user=user)
+
+
 @app.route("/expenses/add")
 def add_expense():
     return "Add expense — coming in Step 7"

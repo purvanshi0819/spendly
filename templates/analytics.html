@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/analytics.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="analytics-page">
+    <div class="analytics-inner">
+        <span class="analytics-badge">Coming soon</span>
+        <h1 class="analytics-title">Analytics</h1>
+        <p class="analytics-subtitle">
+            We are building powerful insights to help you understand your spending.
+            Detailed analytics will be available soon.
+        </p>
+
+        <div class="analytics-features">
+            <div class="analytics-feature-card">
+                <span class="analytics-feature-icon" aria-hidden="true">📊</span>
+                <h2 class="analytics-feature-title">Spending breakdown</h2>
+                <p class="analytics-feature-body">Visualise where your money goes by category and over time.</p>
+            </div>
+            <div class="analytics-feature-card">
+                <span class="analytics-feature-icon" aria-hidden="true">📈</span>
+                <h2 class="analytics-feature-title">Trends &amp; patterns</h2>
+                <p class="analytics-feature-body">Spot recurring costs and track how your habits change month to month.</p>
+            </div>
+            <div class="analytics-feature-card">
+                <span class="analytics-feature-icon" aria-hidden="true">🎯</span>
+                <h2 class="analytics-feature-title">Budget goals</h2>
+                <p class="analytics-feature-body">Set targets and see how close you are to staying on budget.</p>
+            </div>
+        </div>
+
+        <a href="{{ url_for('profile') }}" class="btn-primary analytics-back-btn">Back to my expenses</a>
+    </div>
+</div>
+
+{% endblock %}
