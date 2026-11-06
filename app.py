@@ -7,13 +7,70 @@ from datetime import date, timedelta
 CATEGORIES = ["Food", "Transport", "Bills", "Health",
               "Entertainment", "Shopping", "Other"]
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, abort
 
-from database.db import get_db, init_db, seed_db, create_user, get_user_by_email, get_user_by_id, get_expenses_by_user, create_expense
+from database.db import (
+    get_db, init_db, seed_db, create_user, get_user_by_email,
+    get_user_by_id, get_expenses_by_user, create_expense,
+    get_expense_by_id, update_expense,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = "spendly-dev-secret-key"
+
+
+def _validate_expense_form(form, categories):
+    """Validate an add/edit expense form.
+
+    Returns (error, amount, category, expense_date, description, form_data).
+    On failure ``error`` is a message and ``amount``/``expense_date`` are None.
+    """
+    amount_raw = (form.get("amount") or "").strip()
+    category = (form.get("category") or "").strip()
+    date_raw = (form.get("date") or "").strip()
+    description_raw = (form.get("description") or "").strip()
+
+    error = None
+    amount = None
+    expense_date = None
+
+    if not amount_raw:
+        error = "Amount is required."
+    elif len(amount_raw) > 20:
+        error = "Amount is too long."
+    elif not re.fullmatch(r"^(\d+(\.\d*)?|\.\d+)$", amount_raw):
+        error = "Amount must be a non-negative number."
+    else:
+        amount = float(amount_raw)
+        if not math.isfinite(amount):
+            error = "Amount must be a finite number."
+        elif amount < 0:
+            error = "Amount cannot be negative."
+
+    if error is None and (not category or len(category) > 30 or category not in categories):
+        error = "Please choose a valid category."
+
+    if error is None and (not date_raw or len(date_raw) != 10 or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_raw)):
+        error = "Please enter a valid date."
+    if error is None:
+        try:
+            expense_date = date.fromisoformat(date_raw).isoformat()
+        except (ValueError, TypeError):
+            expense_date = None
+            error = "Please enter a valid date."
+
+    if error is None and len(description_raw) > 500:
+        error = "Description is too long."
+
+    description = description_raw or None if error is None else None
+    form_data = {
+        "amount": amount_raw,
+        "category": category,
+        "date": date_raw,
+        "description": description_raw,
+    }
+    return error, amount, category, expense_date, description, form_data
 
 # ------------------------------------------------------------------ #
 # Routes                                                              #
@@ -233,42 +290,9 @@ def add_expense():
             form={"amount": "", "category": "", "date": date.today().isoformat(), "description": ""},
         )
 
-    amount_raw = (request.form.get("amount") or "").strip()
-    category = (request.form.get("category") or "").strip()
-    date_raw = (request.form.get("date") or "").strip()
-    description_raw = (request.form.get("description") or "").strip()
-
-    error = None
-    amount = None
-    expense_date = None
-
-    if not amount_raw:
-        error = "Amount is required."
-    elif len(amount_raw) > 20:
-        error = "Amount is too long."
-    elif not re.fullmatch(r"^(\d+(\.\d*)?|\.\d+)$", amount_raw):
-        error = "Amount must be a non-negative number."
-    else:
-        amount = float(amount_raw)
-        if not math.isfinite(amount):
-            error = "Amount must be a finite number."
-        elif amount < 0:
-            error = "Amount cannot be negative."
-
-    if error is None and (not category or len(category) > 30 or category not in categories):
-        error = "Please choose a valid category."
-
-    if error is None and (not date_raw or len(date_raw) != 10 or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_raw)):
-        error = "Please enter a valid date."
-    if error is None:
-        try:
-            expense_date = date.fromisoformat(date_raw).isoformat()
-        except (ValueError, TypeError):
-            expense_date = None
-            error = "Please enter a valid date."
-
-    if error is None and len(description_raw) > 500:
-        error = "Description is too long."
+    error, amount, category, expense_date, description, form_data = _validate_expense_form(
+        request.form, categories
+    )
 
     if error:
         return render_template(
@@ -276,22 +300,61 @@ def add_expense():
             user=user,
             categories=categories,
             error=error,
-            form={
-                "amount": amount_raw,
-                "category": category,
-                "date": date_raw,
-                "description": description_raw,
-            },
+            form=form_data,
         )
 
-    description = description_raw or None
     create_expense(user_id, amount, category, expense_date, description)
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    user_id = session.get("user_id")
+    if user_id is None:
+        return redirect(url_for("login"))
+
+    user = get_user_by_id(user_id)
+    if user is None:
+        session.clear()
+        return redirect(url_for("login"))
+
+    expense = get_expense_by_id(id)
+    if expense is None or expense["user_id"] != user_id:
+        abort(404)
+
+    categories = CATEGORIES
+
+    if request.method == "GET":
+        return render_template(
+            "edit_expense.html",
+            user=user,
+            categories=categories,
+            expense=expense,
+            error=None,
+            form={
+                "amount": expense["amount"],
+                "category": expense["category"],
+                "date": expense["date"],
+                "description": expense["description"] if expense["description"] is not None else "",
+            },
+        )
+
+    error, amount, category, expense_date, description, form_data = _validate_expense_form(
+        request.form, categories
+    )
+
+    if error:
+        return render_template(
+            "edit_expense.html",
+            user=user,
+            categories=categories,
+            expense=expense,
+            error=error,
+            form=form_data,
+        )
+
+    update_expense(id, amount, category, expense_date, description, user_id=user_id)
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/delete")
