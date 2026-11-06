@@ -160,3 +160,48 @@ def get_expenses_by_user(user_id, start_date=None, end_date=None):
     finally:
         conn.close()
 
+
+def get_expense_by_id(expense_id):
+    """Return the expense row matching id, or None if no such expense exists."""
+    conn = get_db()
+    try:
+        return conn.execute(
+            "SELECT * FROM expenses WHERE id = ?",
+            (expense_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+
+def update_expense(expense_id, amount, category, date_str, description=None, user_id=None):
+    """Update an existing expense's fields using parameterised queries.
+
+    When ``user_id`` is provided, the row is also scoped to that owner so
+    a mismatched id can never be touched by accident (defense in depth on top
+    of the route-level ownership check).
+    """
+    conn = get_db()
+    try:
+        if user_id is None:
+            cursor = conn.execute(
+                """
+                UPDATE expenses
+                SET amount = ?, category = ?, date = ?, description = ?
+                WHERE id = ?
+                """,
+                (amount, category, date_str, description, expense_id),
+            )
+        else:
+            cursor = conn.execute(
+                """
+                UPDATE expenses
+                SET amount = ?, category = ?, date = ?, description = ?
+                WHERE id = ? AND user_id = ?
+                """,
+                (amount, category, date_str, description, expense_id, user_id),
+            )
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        conn.close()
+
