@@ -205,3 +205,28 @@ def update_expense(expense_id, amount, category, date_str, description=None, use
     finally:
         conn.close()
 
+
+
+def delete_expense(expense_id, user_id=None):
+    """Delete an expense by id and return the affected row count.
+
+    When ``user_id`` is provided, the delete is also scoped to that owner so
+    a mismatched id can never be touched by accident (defense in depth on top
+    of the route-level ownership check).
+    """
+    conn = get_db()
+    try:
+        if user_id is None:
+            cursor = conn.execute(
+                "DELETE FROM expenses WHERE id = ?",
+                (expense_id,),
+            )
+        else:
+            cursor = conn.execute(
+                "DELETE FROM expenses WHERE id = ? AND user_id = ?",
+                (expense_id, user_id),
+            )
+        conn.commit()
+        return cursor.rowcount
+    finally:
+        conn.close()
